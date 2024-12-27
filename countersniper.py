@@ -103,8 +103,24 @@ def saveToDB(discName, EGSName, fileName):
 
             df.to_csv(filename, index=False)
 
+def findDiscordFromDB(EGSName):
+    filename = 'discordEgs.csv'
 
-        
+    # Put the CSV into pandas dataframe
+    df = pd.read_csv(filename)
+
+    # Filter to get discord from egs name
+    result = df.loc[df['EGSUsername'] == EGSName, 'DiscordUsername']
+    
+    # Check if a user was found
+    if not result.empty:
+        print(result.iloc[0])
+        # Return just the discord username for later use
+        return result.iloc[0]
+    else:
+        print("EGS User not found in DB")
+        return 0
+
 '''
 Async Functions
 '''
@@ -115,6 +131,36 @@ async def create_EGS_Message(interaction: discord.Interaction):
     view = EGSView()
     await interaction.response.send_message("To Join Fortnite Custom Games, you must provide your Epic Games Account Username, **exactly as it's spelt as you cannot change this later**.\nPress the button below to do this:\n", view=view)
 
+@bot.tree.command(name = "test_add_to_blacklist", description="Add a user to the blacklist via Epic Games Username")
+async def add_to_blacklist(interaction: discord.Interaction, egs_username: str):
+    
+    # Check for the discord user in the main DB
+    discUser = findDiscordFromDB(egs_username)
+    
+    # If a discord username was not found for the EGS name, send error
+    if discUser == 0:
+        await interaction.response.send_message("A matching Discord username was not found in the DB for this EGS name...", ephemeral=True)
+        return
+
+    # Get the member object by searching via name
+    guild = interaction.guild
+    member = discord.utils.find(lambda m: m.name == discUser, guild.members)
+
+    # If member is not in the server, send message
+    if not member:
+        await interaction.response.send_message(f"Discord member: {discUser} is apparently not in the server...", ephemeral=True)
+
+    # Remove role from member object
+    role = guild.get_role(fnRoleID)
+    await member.remove_roles(role)
+
+    # Add user to the blacklist DB
+    saveToDB(discUser, egs_username, "blacklist.csv")
+
+    print(f"Role removed from {discUser}!")
+    
+    # Send success message
+    await interaction.response.send_message(f"Added {discUser} to the blacklist and removed their role.", ephemeral=True)
 
 # Function to create a message when reacted to will open a form to fill in EGS account info (not in use)
 @bot.tree.command(name = "test_egsrolemessage", description="Sends an EGS role connection message")
