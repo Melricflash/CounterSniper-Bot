@@ -7,7 +7,11 @@ import pandas as pd
 
 import traceback
 
-bot = commands.Bot(command_prefix="?", intents = discord.Intents.all()) # Change to slash commands later...?
+# Live Activity for bot
+#activityName = discord.Activity(type=discord.ActivityType.watching, name="Khoslaa | Message melricflash for support")
+activityName = discord.CustomActivity(name="Message @melricflash for support")
+
+bot = commands.Bot(command_prefix="?", intents = discord.Intents.all(), activity=activityName)
 
 '''
 Classes
@@ -15,7 +19,7 @@ Classes
 class EGSModal(discord.ui.Modal, title="FN Customs Application"):
     egsForm = discord.ui.TextInput(
         label='EGS Username',
-        placeholder='Enter your EGS Username exactly as its spelt'
+        placeholder='Enter your EGS Username exactly as its spelt, you cannot do this later'
     )
 
     # To retrieve the information from the form, we handle it in this function
@@ -28,7 +32,7 @@ class EGSModal(discord.ui.Modal, title="FN Customs Application"):
         print(f"Data received from {discordUsername}: {egsUsername}")
 
         # Next we want to pass to a function that will store this in a database if name doesnt exist
-        DBstatus = saveToDB(discordUsername, egsUsername)
+        DBstatus = saveToDB(discordUsername, egsUsername, 'discordEgs.csv')
 
         if DBstatus == 1:
             await interaction.response.send_message(f'An application was already submitted for either Discord: {discordUsername} or EGS: {egsUsername}', ephemeral=True)
@@ -64,10 +68,10 @@ class EGSView(discord.ui.View):
 Functions
 '''
 
-# Function to store a Discord Name and EGS Name in a CSV file
-def saveToDB(discName, EGSName):
+# Function to store a Discord Name and EGS Name in a CSV file | Blacklisting
+def saveToDB(discName, EGSName, fileName):
 
-    filename = 'discordEgs.csv'
+    filename = fileName
     data = {'DiscordUsername': [discName], 'EGSUsername': [EGSName]}
 
     # Create a new file if it doesnt exist
@@ -91,9 +95,6 @@ def saveToDB(discName, EGSName):
             df.to_csv(filename, index=False)
 
 
-
-
-        
         
 '''
 Async Functions
