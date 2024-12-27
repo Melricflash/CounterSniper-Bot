@@ -13,13 +13,15 @@ activityName = discord.CustomActivity(name="Message @melricflash for support")
 
 bot = commands.Bot(command_prefix="?", intents = discord.Intents.all(), activity=activityName)
 
+fnRoleID = 1322316783805268008
+
 '''
 Classes
 '''
 class EGSModal(discord.ui.Modal, title="FN Customs Application"):
     egsForm = discord.ui.TextInput(
-        label='EGS Username',
-        placeholder='Enter your EGS Username exactly as its spelt, you cannot do this later'
+        label='Enter EGS Username',
+        placeholder='Epic Games Username...'
     )
 
     # To retrieve the information from the form, we handle it in this function
@@ -34,14 +36,21 @@ class EGSModal(discord.ui.Modal, title="FN Customs Application"):
         # Next we want to pass to a function that will store this in a database if name doesnt exist
         DBstatus = saveToDB(discordUsername, egsUsername, 'discordEgs.csv')
 
+        # TODO: Check if the user exists in the blacklist
+
         if DBstatus == 1:
             await interaction.response.send_message(f'An application was already submitted for either Discord: {discordUsername} or EGS: {egsUsername}', ephemeral=True)
             return
         
         await interaction.response.send_message(f'Your application was submitted!', ephemeral=True)
 
-        # TODO: Handle adding user to role
+        # If checks pass, we add the role to the user
+        guild = interaction.guild
+        member = interaction.user
 
+        # Add role to the user using the role ID
+        role = guild.get_role(fnRoleID)
+        await member.add_roles(role)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await interaction.response.send_message('Something went wrong!', ephemeral=True)
@@ -104,10 +113,10 @@ Async Functions
 @bot.tree.command(name = "test_egs_modal", description="Requests EGS Form")
 async def create_EGS_Message(interaction: discord.Interaction):
     view = EGSView()
-    await interaction.response.send_message("To Join Fortnite Custom Games, you must provide your Epic Games Account Username, press the button below to do this:\n", view=view)
+    await interaction.response.send_message("To Join Fortnite Custom Games, you must provide your Epic Games Account Username, **exactly as it's spelt as you cannot change this later**.\nPress the button below to do this:\n", view=view)
 
 
-# Function to create a message when reacted to will open a form to fill in EGS account info
+# Function to create a message when reacted to will open a form to fill in EGS account info (not in use)
 @bot.tree.command(name = "test_egsrolemessage", description="Sends an EGS role connection message")
 async def test_egsRoleMessage(interaction: discord.Interaction):
     # If you want private responses, set ephemeral to True
