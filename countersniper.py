@@ -15,6 +15,7 @@ bot = commands.Bot(command_prefix="?", intents = discord.Intents.all(), activity
 
 # Change for prod server
 fnRoleID = 1322316783805268008
+botMasterID = 1322547239876563005
 
 '''
 Classes
@@ -168,7 +169,6 @@ def checkUniqueEGS(EGSName, filename):
 Async Functions
 '''
 
-
 @bot.tree.command(name = "test_egs_modal", description="Requests EGS Form")
 async def create_EGS_Message(interaction: discord.Interaction):
     view = EGSView()
@@ -211,6 +211,12 @@ async def add_to_blacklist(interaction: discord.Interaction, egs_username: str):
     # Send success message
     await interaction.response.send_message(f"Added {discUser} to the blacklist and removed their role.", ephemeral=True)
 
+'''
+Depreciated Commands
+'''
+
+
+'''
 # Function to create a message when reacted to will open a form to fill in EGS account info (not in use)
 @bot.tree.command(name = "test_egsrolemessage", description="Sends an EGS role connection message")
 async def test_egsRoleMessage(interaction: discord.Interaction):
@@ -237,7 +243,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
         return
 
     print(f"Reaction registered from {user.name} on the target message")
-
+'''
 
 '''
 Connection Functions
