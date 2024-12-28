@@ -31,6 +31,7 @@ class EGSModal(discord.ui.Modal, title="FN Customs Application"):
         # Retrieve submitted EGS username and Discord Username
         egsUsername = self.egsForm.value
         discordUsername = interaction.user.name
+        discordID = interaction.user.id
 
         print(f"Data received from {discordUsername}: {egsUsername}")
 
@@ -41,7 +42,7 @@ class EGSModal(discord.ui.Modal, title="FN Customs Application"):
                 return
 
         # Next we want to pass to a function that will store this in a database if name doesnt exist
-        DBstatus = saveToDB(discordUsername, egsUsername, 'discordEgs.csv')
+        DBstatus = saveToDB(discordUsername, discordID, egsUsername, 'discordEgs.csv')
 
         if DBstatus == 1:
             await interaction.response.send_message(f'An application was already submitted for either Discord: {discordUsername} or EGS: {egsUsername}', ephemeral=True)
@@ -83,10 +84,10 @@ Functions
 '''
 
 # Function to store a Discord Name and EGS Name in a CSV file | Blacklisting
-def saveToDB(discName, EGSName, fileName):
+def saveToDB(discName, discID, EGSName, fileName):
 
     filename = fileName
-    data = {'DiscordUsername': [discName], 'EGSUsername': [EGSName]}
+    data = {'DiscordUsername': [discName], 'DiscordID': [discID], 'EGSUsername': [EGSName]}
 
     # Create a new file if it doesnt exist
     if not os.path.exists(filename):
@@ -97,7 +98,7 @@ def saveToDB(discName, EGSName, fileName):
         df = pd.read_csv(filename)
         
         # Check if an entry exists
-        if df['DiscordUsername'].isin([discName]).any() or df['EGSUsername'].isin([EGSName]).any():
+        if df['DiscordUsername'].isin([discName]).any() or df['DiscordID'].isin([discID]).any() or df['EGSUsername'].isin([EGSName]).any():
             print(f"An application was already submitted for either Discord: {discName} or EGS: {EGSName}")
             return 1
 
@@ -117,15 +118,26 @@ def findDiscordFromDB(EGSName):
 
     # Filter to get discord from egs name
     result = df.loc[df['EGSUsername'] == EGSName, 'DiscordUsername']
+
+    resultID = df.loc[df['EGSUsername'] == EGSName, 'DiscordID']
     
     # Check if a user was found
     if not result.empty:
         print(result.iloc[0])
         # Return just the discord username for later use
-        return result.iloc[0]
+        # return result.iloc[0]
     else:
         print("EGS User not found in DB")
-        return 0
+        return 0, 0
+    
+    # Check if user id was found
+    if not resultID.empty:
+        print(resultID.iloc[0])
+    else:
+        print("EGS User could not be tied to a Discord ID")
+        return 0, 0
+
+    return result.iloc[0], resultID.iloc[0]
 
 # Function to check if an given account is in the blacklist database (note to self, could make this more modular for later functions?)
 def checkBlacklist(discName, EGSName, filename):
@@ -151,16 +163,22 @@ async def create_EGS_Message(interaction: discord.Interaction):
 async def add_to_blacklist(interaction: discord.Interaction, egs_username: str):
     
     # Check for the discord user in the main DB
-    discUser = findDiscordFromDB(egs_username)
+    discUser, discID = findDiscordFromDB(egs_username)
     
     # If a discord username was not found for the EGS name, send error
-    if discUser == 0:
+    if discUser == 0 or discID == 0:
         await interaction.response.send_message("A matching Discord username was not found in the DB for this EGS name...", ephemeral=True)
         return
 
     # Get the member object by searching via name
     guild = interaction.guild
-    member = discord.utils.find(lambda m: m.name == discUser, guild.members)
+
+    # Get member via username
+    #member = discord.utils.find(lambda m: m.name == discUser, guild.members)
+
+    # Get member via discordID, allows for changing username
+    member = guild.get_member(discID)
+
 
     # If member is not in the server, send message
     if not member:
@@ -171,7 +189,7 @@ async def add_to_blacklist(interaction: discord.Interaction, egs_username: str):
     await member.remove_roles(role)
 
     # Add user to the blacklist DB
-    saveToDB(discUser, egs_username, "blacklist.csv")
+    saveToDB(discUser, discID, egs_username, "blacklist.csv")
 
     print(f"Role removed from {discUser} and added to blacklist!")
     
