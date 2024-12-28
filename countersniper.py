@@ -13,6 +13,7 @@ activityName = discord.CustomActivity(name="Message @melricflash for support")
 
 bot = commands.Bot(command_prefix="?", intents = discord.Intents.all(), activity=activityName)
 
+# Change for prod server
 fnRoleID = 1322316783805268008
 
 '''
@@ -33,10 +34,14 @@ class EGSModal(discord.ui.Modal, title="FN Customs Application"):
 
         print(f"Data received from {discordUsername}: {egsUsername}")
 
+        # Check if a blacklist database exists, then check if the user is already on the blacklist
+        if os.path.exists('blacklist.csv'):
+            if checkBlacklist(discordUsername, egsUsername, 'blacklist.csv'):
+                await interaction.response.send_message(f"You have been blacklisted for breaking the Khoslaa FN Customs Terms and Conditions, lmao go cry to a mod", ephemeral=True)
+                return
+
         # Next we want to pass to a function that will store this in a database if name doesnt exist
         DBstatus = saveToDB(discordUsername, egsUsername, 'discordEgs.csv')
-
-        # TODO: Check if the user exists in the blacklist
 
         if DBstatus == 1:
             await interaction.response.send_message(f'An application was already submitted for either Discord: {discordUsername} or EGS: {egsUsername}', ephemeral=True)
@@ -103,6 +108,7 @@ def saveToDB(discName, EGSName, fileName):
 
             df.to_csv(filename, index=False)
 
+# Function to find a discord username using their registered EGS name 
 def findDiscordFromDB(EGSName):
     filename = 'discordEgs.csv'
 
@@ -120,6 +126,16 @@ def findDiscordFromDB(EGSName):
     else:
         print("EGS User not found in DB")
         return 0
+
+# Function to check if an given account is in the blacklist database (note to self, could make this more modular for later functions?)
+def checkBlacklist(discName, EGSName, filename):
+    df = pd.read_csv(filename)
+
+    # Check if the discord username or EGS username exists in the blacklist
+    if df['DiscordUsername'].isin([discName]).any() or df['EGSUsername'].isin([EGSName]).any():
+        return True
+    else:
+        return False
 
 '''
 Async Functions
@@ -157,7 +173,7 @@ async def add_to_blacklist(interaction: discord.Interaction, egs_username: str):
     # Add user to the blacklist DB
     saveToDB(discUser, egs_username, "blacklist.csv")
 
-    print(f"Role removed from {discUser}!")
+    print(f"Role removed from {discUser} and added to blacklist!")
     
     # Send success message
     await interaction.response.send_message(f"Added {discUser} to the blacklist and removed their role.", ephemeral=True)
