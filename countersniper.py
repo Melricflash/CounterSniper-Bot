@@ -40,6 +40,12 @@ class EGSModal(discord.ui.Modal, title="FN Customs Application"):
             if checkBlacklist(discordUsername, egsUsername, 'blacklist.csv'):
                 await interaction.response.send_message(f"You have been blacklisted for breaking the Khoslaa FN Customs Terms and Conditions, lmao go cry to a mod", ephemeral=True)
                 return
+        
+        # Check that the input EGS name is not already in the database
+        if os.path.exists('discordEGS.csv'):
+            if checkUniqueEGS(egsUsername, 'discordEgs.csv'):
+                await interaction.response.send_message(f"This EGS name has already been registered for an account!")
+                return
 
         # Next we want to pass to a function that will store this in a database if name doesnt exist
         DBstatus = saveToDB(discordUsername, discordID, egsUsername, 'discordEgs.csv')
@@ -145,6 +151,15 @@ def checkBlacklist(discName, EGSName, filename):
 
     # Check if the discord username or EGS username exists in the blacklist
     if df['DiscordUsername'].isin([discName]).any() or df['EGSUsername'].isin([EGSName]).any():
+        return True
+    else:
+        return False
+    
+def checkUniqueEGS(EGSName, filename):
+    df = pd.read_csv(filename)
+
+    # Check if the EGS username already exists in the blacklist
+    if df['EGSUsername'].isin([EGSName]).any():
         return True
     else:
         return False
