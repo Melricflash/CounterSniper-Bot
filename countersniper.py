@@ -2,10 +2,11 @@ import discord
 import os
 from discord.ext import commands
 from discord.utils import get
+
 import csv
 import pandas as pd
-
 import traceback
+import re
 
 # Live Activity for bot
 #activityName = discord.Activity(type=discord.ActivityType.watching, name="Khoslaa | Message melricflash for support")
@@ -13,9 +14,21 @@ activityName = discord.CustomActivity(name="Message @melricflash for support")
 
 bot = commands.Bot(command_prefix="?", intents = discord.Intents.all(), activity=activityName)
 
-# Change for prod server
+# Testing Server ID's
 fnRoleID = 1322316783805268008
 botMasterID = 1322547239876563005
+
+# Khoslaa Server IDs
+
+
+
+# Regex String for EGS Username Matching
+regex = re.compile(r"^[a-zA-Z0-9 _-]{3,16}$")
+
+# Swear Jar read in from external text file
+if os.path.exists('offensiveWords.txt'):
+    with open('offensiveWords.txt', 'r') as file:
+        offensives = [line.strip() for line in file]
 
 '''
 Classes
@@ -35,6 +48,12 @@ class EGSModal(discord.ui.Modal, title="FN Customs Application"):
         discordID = interaction.user.id
 
         print(f"Data received from {discordUsername}: {egsUsername}")
+
+        # Allow alphanumeric with hyphen and underscore, between 3 and 16 characters
+        # Also want check for repetition and swears/slurs
+        if not checkValidEGSUsername(egsUsername):
+            await interaction.response.send_message(f"The username '{egsUsername}' is not a valid username!", ephemeral=True)
+            return
 
         # Check if a blacklist database exists, then check if the user is already on the blacklist
         if os.path.exists('blacklist.csv'):
@@ -155,7 +174,8 @@ def checkBlacklist(discName, EGSName, filename):
         return True
     else:
         return False
-    
+
+# Function to check that an EGS username is unique in the database    
 def checkUniqueEGS(EGSName, filename):
     df = pd.read_csv(filename)
 
@@ -164,6 +184,27 @@ def checkUniqueEGS(EGSName, filename):
         return True
     else:
         return False
+
+# Function to check that an EGS username matches the regex supplied
+def checkValidEGSUsername(username):
+    # Check if the initial EGS requirement matches the Regex
+    if not regex.match(username):
+        return False
+    
+    # Check for offensive words
+    if os.path.exists('offensiveWords.txt'):
+        for word in offensives:
+            if re.search(rf"\b{re.escape(word)}\b", username, re.IGNORECASE):
+                return False
+    else:
+        # Default if there is no offensive word list
+        return True
+        
+    # Check for repetition of a single character
+    if re.search(r"(.)\1{2,}", username.replace(" ", "")):
+        return False
+
+    return True
 
 '''
 Async Functions
