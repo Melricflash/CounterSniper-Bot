@@ -9,17 +9,22 @@ import traceback
 import re
 
 # Live Activity for bot
-#activityName = discord.Activity(type=discord.ActivityType.watching, name="Khoslaa | Message melricflash for support")
-activityName = discord.CustomActivity(name="Message @melricflash for support")
+activityName = discord.Activity(type=discord.ActivityType.watching, name="Khoslaa")
+#activityName = discord.CustomActivity(name="Message @melricflash | @realmtraveller for support")
 
 bot = commands.Bot(command_prefix="?", intents = discord.Intents.all(), activity=activityName)
 
-# Testing Server ID's
-fnRoleID = 1322316783805268008
-botMasterID = 1322547239876563005
+# Change to True if testing bot on dev server, for live mode set False
+testMode = False
 
-# Khoslaa Server IDs
-
+if testMode:
+    # Dev Server IDs
+    fnRoleID = 1322316783805268008
+    botMasterID = 1322547239876563005
+else:
+    # Khoslaa IDs
+    fnRoleID = 1322556355273293824
+    botMasterID = 1322555872324358216
 
 
 # Regex String for EGS Username Matching
@@ -53,18 +58,21 @@ class EGSModal(discord.ui.Modal, title="FN Customs Application"):
         # Also want check for repetition and swears/slurs
         if not checkValidEGSUsername(egsUsername):
             await interaction.response.send_message(f"The username '{egsUsername}' is not a valid username!", ephemeral=True)
+            print(f"Intercepted bad name! {egsUsername}")
             return
 
         # Check if a blacklist database exists, then check if the user is already on the blacklist
         if os.path.exists('blacklist.csv'):
             if checkBlacklist(discordUsername, egsUsername, 'blacklist.csv'):
                 await interaction.response.send_message(f"You have been blacklisted for breaking the Khoslaa FN Customs Terms and Conditions, lmao go cry to a mod", ephemeral=True)
+                print(f"Intercepted blacklisted user! {discordUsername}")
                 return
         
         # Check that the input EGS name is not already in the database
         if os.path.exists('discordEGS.csv'):
             if checkUniqueEGS(egsUsername, 'discordEgs.csv'):
                 await interaction.response.send_message(f"This EGS name has already been registered for an account!")
+                print(f"Intercepted existing name! {egsUsername}, {discordUsername}")
                 return
 
         # Next we want to pass to a function that will store this in a database if name doesnt exist
@@ -210,12 +218,12 @@ def checkValidEGSUsername(username):
 Async Functions
 '''
 
-@bot.tree.command(name = "test_egs_modal", description="Requests EGS Form")
+@bot.tree.command(name = "send_signup_form", description="Requests EGS Form")
 async def create_EGS_Message(interaction: discord.Interaction):
     view = EGSView()
     await interaction.response.send_message("To Join Fortnite Custom Games, you must provide your Epic Games Account Username, **exactly as it's spelt as you cannot change this later**.\nPress the button below to do this:\n", view=view)
 
-@bot.tree.command(name = "test_add_to_blacklist", description="Add a user to the blacklist via Epic Games Username")
+@bot.tree.command(name = "blacklist", description="Add a user to the blacklist via Epic Games Username")
 async def add_to_blacklist(interaction: discord.Interaction, egs_username: str):
     
     # Check for the discord user in the main DB
