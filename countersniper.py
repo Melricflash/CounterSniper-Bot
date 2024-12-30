@@ -15,7 +15,7 @@ activityName = discord.Activity(type=discord.ActivityType.watching, name="Khosla
 bot = commands.Bot(command_prefix="?", intents = discord.Intents.all(), activity=activityName)
 
 # Change to True if testing bot on dev server, for live mode set False
-testMode = False
+testMode = True
 
 if testMode:
     # Dev Server IDs
@@ -28,7 +28,9 @@ else:
 
 
 # Regex String for EGS Username Matching
-regex = re.compile(r"^[a-zA-Z0-9 _-]{3,16}$")
+#regex = re.compile(r"^[a-zA-Z0-9 _-]{3,16}$")
+regex = re.compile(r"^[\S\s]{3,16}$")
+
 
 # Swear Jar read in from external text file
 if os.path.exists('offensiveWords.txt'):
@@ -67,11 +69,14 @@ class EGSModal(discord.ui.Modal, title="FN Customs Application"):
                 await interaction.response.send_message(f"You have been blacklisted for breaking the Khoslaa FN Customs Terms and Conditions, lmao go cry to a mod", ephemeral=True)
                 print(f"Intercepted blacklisted user! {discordUsername}")
                 return
-        
+        else:
+            # Create a new blacklist to allow for manual entries
+            createEmptyBlacklist()
+
         # Check that the input EGS name is not already in the database
         if os.path.exists('discordEGS.csv'):
             if checkUniqueEGS(egsUsername, 'discordEgs.csv'):
-                await interaction.response.send_message(f"This EGS name has already been registered for an account!")
+                await interaction.response.send_message(f"This EGS name has already been registered for an account!", ephemeral=True)
                 print(f"Intercepted existing name! {egsUsername}, {discordUsername}")
                 return
 
@@ -208,11 +213,18 @@ def checkValidEGSUsername(username):
         # Default if there is no offensive word list
         return True
         
-    # Check for repetition of a single character
-    if re.search(r"(.)\1{2,}", username.replace(" ", "")):
-        return False
+    # Check for repetition of a single character, disabled for now
+
+    # if re.search(r"(.)\1{2,}", username.replace(" ", "")):
+    #     return False
 
     return True
+
+# Function to create an empty blacklist file, make modular in the future
+def createEmptyBlacklist():
+    cols = ['DiscordUsername', 'DiscordID', 'EGSUsername']
+    df = pd.DataFrame(columns=cols)
+    df.to_csv('blacklist.csv', index=False)
 
 '''
 Async Functions
@@ -221,7 +233,7 @@ Async Functions
 @bot.tree.command(name = "send_signup_form", description="Requests EGS Form")
 async def create_EGS_Message(interaction: discord.Interaction):
     view = EGSView()
-    await interaction.response.send_message("To Join Fortnite Custom Games, you must provide your Epic Games Account Username, **exactly as it's spelt as you cannot change this later**.\nPress the button below to do this:\n", view=view)
+    await interaction.response.send_message("To Join Fortnite Custom Games, you must provide your Epic Games Account Username, **exactly as it's spelt, as you cannot change this later**.\n**You do not need to register again if you have done so before successfully**.\nPress the button below to do this:\n", view=view)
 
 @bot.tree.command(name = "blacklist", description="Add a user to the blacklist via Epic Games Username")
 async def add_to_blacklist(interaction: discord.Interaction, egs_username: str):
@@ -233,6 +245,9 @@ async def add_to_blacklist(interaction: discord.Interaction, egs_username: str):
     if discUser == 0 or discID == 0:
         await interaction.response.send_message("A matching Discord username was not found in the DB for this EGS name...", ephemeral=True)
         return
+        
+    # Add user to the blacklist DB, save even if user is not in server anymore
+    saveToDB(discUser, discID, egs_username, "blacklist.csv")
 
     # Get the member object by searching via name
     guild = interaction.guild
@@ -243,17 +258,14 @@ async def add_to_blacklist(interaction: discord.Interaction, egs_username: str):
     # Get member via discordID, allows for changing username
     member = guild.get_member(discID)
 
-
     # If member is not in the server, send message
     if not member:
-        await interaction.response.send_message(f"Discord member: {discUser} is apparently not in the server...", ephemeral=True)
+        await interaction.response.send_message(f"Discord member: {discUser} is not in the server. They were added to the blacklist instead!", ephemeral=True)
+        return
 
     # Remove role from member object
     role = guild.get_role(fnRoleID)
     await member.remove_roles(role)
-
-    # Add user to the blacklist DB
-    saveToDB(discUser, discID, egs_username, "blacklist.csv")
 
     print(f"Role removed from {discUser} and added to blacklist!")
     
