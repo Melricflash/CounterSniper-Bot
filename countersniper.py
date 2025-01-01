@@ -15,7 +15,7 @@ activityName = discord.Activity(type=discord.ActivityType.watching, name="Khosla
 bot = commands.Bot(command_prefix="?", intents = discord.Intents.all(), activity=activityName)
 
 # Change to True if testing bot on dev server, for live mode set False
-testMode = True
+testMode = False
 
 if testMode:
     # Dev Server IDs
@@ -42,7 +42,7 @@ Classes
 '''
 class EGSModal(discord.ui.Modal, title="FN Customs Application"):
     egsForm = discord.ui.TextInput(
-        label='Enter EGS Username',
+        label='Enter Epic Games Username',
         placeholder='Epic Games Username...'
     )
 
@@ -105,7 +105,7 @@ class EGSModal(discord.ui.Modal, title="FN Customs Application"):
 
 class EGSButton(discord.ui.Button):
     def __init__(self):
-        super().__init__(label="Start Application", style=discord.ButtonStyle.primary)
+        super().__init__(label="Start Application", style=discord.ButtonStyle.primary, custom_id = "start_application_button")
 
     async def callback(self, interaction: discord.Interaction):
         modal = EGSModal()
@@ -113,8 +113,8 @@ class EGSButton(discord.ui.Button):
 
 
 class EGSView(discord.ui.View):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, timeout: float = None):
+        super().__init__(timeout = timeout)
         self.add_item(EGSButton())
 
 
@@ -229,11 +229,12 @@ def createEmptyBlacklist():
 '''
 Async Functions
 '''
-
+# Send the EGS Sign up form
 @bot.tree.command(name = "send_signup_form", description="Requests EGS Form")
 async def create_EGS_Message(interaction: discord.Interaction):
-    view = EGSView()
-    await interaction.response.send_message("To Join Fortnite Custom Games, you must provide your Epic Games Account Username, **exactly as it's spelt, as you cannot change this later**.\n**You do not need to register again if you have done so before successfully**.\nPress the button below to do this:\n", view=view)
+    view = EGSView(timeout=None)
+    codesChannel = interaction.guild.get_channel(1322975781311221855)
+    await interaction.response.send_message(f"To Join Fortnite Custom Games, you must provide your Epic Games Account Username, **exactly as it's spelt, as you cannot change this later**.\n**You do not need to register again if you have done so before successfully**.\n**Once you have registered, | click this -> {codesChannel.mention} <- click this | to see the Fortnite game code!**.\nPress the button below to start:\n", view=view)
 
 @bot.tree.command(name = "blacklist", description="Add a user to the blacklist via Epic Games Username")
 async def add_to_blacklist(interaction: discord.Interaction, egs_username: str):
@@ -321,6 +322,8 @@ async def on_ready():
         print(f"Synced {len(synced_commands)} commands.")
     except Exception as e:
         print("Something went wrong while syncing commands: " , e)
+
+    bot.add_view(EGSView(timeout=None))
 
 #print(os.getcwd())
 # Read the token secret from external file, might need to change this directory
